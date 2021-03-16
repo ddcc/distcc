@@ -764,20 +764,21 @@ static int dcc_run_job(int in_fd,
     if ((ret = dcc_check_compiler_masq(argv[0])))
         goto out_cleanup;
 
-    if (!opt_enable_tcp_insecure &&
-        !getenv("DISTCC_CMDLIST") &&
-        dcc_check_compiler_whitelist(argv[0]))
-        goto out_cleanup;
-
-    /* unsafe compiler options. See  https://youtu.be/bSkpMdDe4g4?t=53m12s
-       on securing https://godbolt.org/ */
-    char *a;
-    int i;
-    for (i = 0; (a = argv[i]); i++)
-        if (strncmp(a, "-fplugin=", strlen("-fplugin=")) == 0 ||
-            strncmp(a, "-specs=", strlen("-specs=")) == 0) {
-            rs_log_warning("-fplugin= and/or -specs= passed, which are insecure and not supported.");
+    if (!opt_enable_tcp_insecure) {
+        if (!getenv("DISTCC_CMDLIST") &&
+            dcc_check_compiler_whitelist(argv[0]))
             goto out_cleanup;
+
+        /* unsafe compiler options. See  https://youtu.be/bSkpMdDe4g4?t=53m12s
+           on securing https://godbolt.org/ */
+        char *a;
+        int i;
+        for (i = 0; (a = argv[i]); i++)
+            if (strncmp(a, "-fplugin=", strlen("-fplugin=")) == 0 ||
+                strncmp(a, "-specs=", strlen("-specs=")) == 0) {
+                rs_log_warning("-fplugin= and/or -specs= passed, which are insecure and not supported.");
+                goto out_cleanup;
+        }
     }
 
     if ((compile_ret = dcc_spawn_child(argv, &cc_pid,
